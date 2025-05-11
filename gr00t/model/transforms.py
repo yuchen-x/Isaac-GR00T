@@ -20,6 +20,7 @@ import numpy as np
 import torch
 from pydantic import Field, PrivateAttr
 from transformers.data.data_collator import DataCollatorMixin
+from einops import rearrange
 
 from gr00t.data.schema import DatasetMetadata, EmbodimentTag
 from gr00t.data.transform.base import InvertibleModalityTransform
@@ -148,9 +149,11 @@ class GR00TTransform(InvertibleModalityTransform):
                 video: [T, V, H, W, C]
         """
         images = batch["images"]
-        assert images.shape[0] == 1, "double check formatting when doing multi-time step"
-        # Remove the singleton time dimension.
-        images = images[0]
+        if images.shape[0] == 1:
+            # Remove the singleton time dimension.
+            images = images[0]
+        else:
+            images = rearrange(images, 't v h w c -> (t v) h w c')
         images = [{"np_array": images[idx]} for idx in range(len(images))]
         if "language" in batch:
             lang = batch["language"]
